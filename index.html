@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>12장 선택 타로</title>
+  <style>
+    :root{
+      --bg:#0f0f14;
+      --text:#f3f3f7;
+      --muted:#b9b9c7;
+      --panel:rgba(255,255,255,0.03);
+      --border:rgba(255,255,255,0.08);
+      --accent:#8a7dff;
+      --good:#7cff6b;
+      --warn:#ffd36b;
+      --bad:#ff6b6b;
+      --radius:16px;
+      --cardRadius:18px;
+      --cardW: min(22vw, 118px);
+      --cardH: calc(var(--cardW) * 1.55);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;
+      background:radial-gradient(900px 600px at 50% 0%, #1c1b2d 0%, var(--bg) 55%);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:18px 14px 28px;}
+    .top{
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:14px;
+    }
+    h1{font-size:18px; margin:0}
+    .sub{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.35}
+    .controls{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    button{
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      user-select:none;
+    }
+    button:active{transform:translateY(1px)}
+    button.primary{background:rgba(138,125,255,0.20); border-color:rgba(138,125,255,0.35)}
+    button.danger{background:rgba(255,107,107,0.16); border-color:rgba(255,107,107,0.32)}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(0,0,0,0.18);
+      color:var(--muted); font-size:12px;
+    }
+    .pill b{color:var(--text)}
+    .grid{display:grid; grid-template-columns:1fr; gap:16px; margin-top:16px;}
+    @media (min-width: 980px){
+      .grid{grid-template-columns: 1.25fr .75fr;}
+    }
+
+    /* Left area */
+    .board{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:16px;
+    }
+    .hint{margin:0 0 12px; color:var(--muted); font-size:13px; line-height:1.35}
+    .cardGrid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      justify-items:center;
+    }
+    @media (min-width: 520px){
+      .cardGrid{grid-template-columns: repeat(6, 1fr);}
+    }
+
+    .cardSlot{width:var(--cardW); height:var(--cardH); perspective:900px; position:relative;}
+    .card{
+      position:absolute; inset:0;
+      transform-style:preserve-3d;
+      transition:transform .55s cubic-bezier(.2,.8,.2,1), filter .2s ease;
+      border-radius:var(--cardRadius);
+      cursor:pointer;
+    }
+    .card:hover{filter:brightness(1.06)}
+    .card.flipped{transform:rotateY(180deg)}
+    .face{
+      position:absolute; inset:0;
+      border-radius:var(--cardRadius);
+      backface-visibility:hidden;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,0.10);
+      box-shadow:0 14px 40px rgba(0,0,0,0.42);
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+    }
+    .back{transform:rotateY(0deg)}
+    .front{transform:rotateY(180deg)}
+    .selectedGlow{
+      outline:2px solid rgba(138,125,255,0.55);
+      box-shadow:0 0 0 6px rgba(138,125,255,0.18), 0 18px 60px rgba(0,0,0,0.45);
+    }
+
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px;}
+    .small{color:var(--muted); font-size:12px; margin:0}
+
+    /* Right panel */
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:16px;
+    }
+    .panel h2{margin:0 0 10px; font-size:16px}
+    .result{
+      padding:12px;
+      border-radius:14px;
+      background:rgba(0,0,0,0.20);
+      border:1px solid rgba(255,255,255,0.08);
+      min-height:220px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px;
+      font-size:12px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.05);
+      width:fit-content;
+    }
+    .dot{width:8px; height:8px; border-radius:999px; background:var(--accent);}
+    .k{margin:0; color:var(--muted); font-size:13px; line-height:1.45}
+    .big{margin:0; font-size:16px; line-height:1.55}
+    .box{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+    }
+    .advice{
+      border:1px dashed rgba(138,125,255,0.45);
+      background:rgba(138,125,255,0.12);
+      color:#ecebff;
+      font-weight:900;
+    }
+    .dangerLine{border-color:rgba(255,107,107,0.38); background:rgba(255,107,107,0.10)}
+    .divider{height:1px; background:rgba(255,255,255,0.08); margin:12px 0;}
+    .history{display:flex; flex-direction:column; gap:8px; max-height:260px; overflow:auto; padding-right:4px;}
+    .histItem{
+      display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+      padding:10px 10px; border-radius:12px;
+      background:rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.07);
+    }
+    .histItem small{color:var(--muted)}
+    .histItem b{display:block; margin-bottom:4px}
+    .miniBtn{padding:8px 10px; font-size:12px; border-radius:10px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>🔮 12장 선택 타로</h1>
+      <p class="sub">12장의 뒷면 카드 중 하나를 골라 탭해봐. 선택한 카드만 뒤집히고, 오른쪽에 해석이 풍부하게 뜬다.</p>
+    </div>
+    <div class="controls">
+      <span class="pill">모드: <b id="modeLabel">오늘의 한 장</b></span>
+      <button class="primary" id="btnToday">오늘의 한 장</button>
+      <button id="btnFree">자유 뽑기</button>
+      <button id="btnShuffle">카드 다시 섞기</button>
+      <button id="btnShare">결과 복사</button>
+      <button class="danger" id="btnReset">초기화</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Left: 12 cards -->
+    <div class="board">
+      <p class="hint" id="hint">
+        오늘의 한 장 모드에서는 “오늘 하루” 카드가 고정이지만, <b>어느 위치에 놓일지는 섞을 때마다 바뀐다</b>.
+      </p>
+
+      <div class="cardGrid" id="cardGrid"></div>
+
+      <div class="row">
+        <span class="pill">선택: <b id="pickedLabel">없음</b></span>
+        <span class="pill">상태: <b id="stateLabel">대기</b></span>
+      </div>
+      <p class="small">✅ 팁: 친구들이랑 할 땐 “자유 뽑기 + 카드 다시 섞기”로 돌리면 중독성 올라감.</p>
+    </div>
+
+    <!-- Right: result -->
+    <div class="panel">
+      <h2>해석</h2>
+      <div class="result" id="resultBox">
+        <span class="badge"><span class="dot" id="toneDot"></span><span id="resTitle">아직 선택한 카드가 없어</span></span>
+        <p class="k" id="resKeywords">키워드: —</p>
+
+        <div class="box">
+          <p class="k" style="margin:0 0 6px;">핵심 해석</p>
+          <p class="big" id="resCore">카드를 선택하면 해석이 표시돼.</p>
+        </div>
+
+        <div class="box">
+          <p class="k" style="margin:0 0 6px;">지금 상황에서 이렇게 읽어봐</p>
+          <p class="big" id="resContext">—</p>
+        </div>
+
+        <div class="box advice">
+          <p class="k" style="margin:0 0 6px; color:#ecebff;">한 줄 조언</p>
+          <p class="big" id="resAdvice" style="margin:0;">—</p>
+        </div>
+
+        <div class="box dangerLine">
+          <p class="k" style="margin:0 0 6px;">금기/주의</p>
+          <p class="big" id="resWarn" style="margin:0;">—</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; font-size:16px;">최근 기록</h2>
+        <button class="miniBtn" id="btnClearHistory">기록 지우기</button>
+      </div>
+      <div class="history" id="history"></div>
+
+      <p class="small">⚠️ 재미/자기성찰용. 중요한 결정은 현실 정보도 같이 확인하자.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 카드 데이터(설명 풍부 버전) =====
+  const CARDS = [
+    {
+      id:"sun", name:"태양", icon:"🌞", img:"images/sun.png",
+      keywords:["성공","긍정","명확함","회복"],
+      tone:"good",
+      core:"흐름이 당신 편으로 기울고 있어요. ‘잘 되고 있는 걸 더 밀어도 되는’ 카드입니다.",
+      context:"망설임이 커질수록 기회가 희미해져요. 지금은 정보가 충분하고, 주변 반응도 우호적일 가능성이 큽니다. 작은 결정을 미루기보다 ‘한 번 더 시도’가 성과로 이어지기 쉬워요.",
+      advice:"한 단계만 더 앞으로 가세요. 결과는 따라옵니다.",
+      warn:"완벽주의로 속도를 깎지 마세요. ‘더 준비하고…’가 핑계가 되는 순간이 있습니다."
+    },
+    {
+      id:"moon", name:"달", icon:"🌙", img:"images/moon.png",
+      keywords:["불안","오해","착각","잠재"],
+      tone:"warn",
+      core:"지금은 감정이 사실을 가리고 있을 수 있어요. 확정하기엔 안개가 많습니다.",
+      context:"상대의 말/행동을 과대해석하거나, 반대로 중요한 신호를 놓치기 쉬운 구간입니다. ‘느낌’이 강하게 오더라도 데이터(대화/문서/일정/증거)를 한 번 더 확인하는 게 유리해요.",
+      advice:"오늘은 결론 내리지 말고, 확인 질문 1~2개만 던지세요.",
+      warn:"새벽 감정결정(충동 연락/확 질러버리기)을 피하세요. 내일 보면 후회할 확률이 큽니다."
+    },
+    {
+      id:"lovers", name:"연인", icon:"❤️", img:"images/lovers.png",
+      keywords:["관계","선택","합의","가치"],
+      tone:"good",
+      core:"핵심은 ‘무엇을 선택하느냐’예요. 관계든 일이든, 가치 기준이 드러나는 카드입니다.",
+      context:"지금은 누군가와의 ‘합의’가 중요해요. 말로만 좋아 보이는 선택보다, 실제로 지속 가능한 약속/규칙을 만드는 것이 포인트입니다. 감정이 크면 클수록 기준을 명확히 해야 오래 갑니다.",
+      advice:"좋은 선택은 ‘둘 다 편한 규칙’을 만드는 것에서 시작해요.",
+      warn:"상대 눈치만 보며 나를 버리는 선택은 나중에 크게 터집니다."
+    },
+    {
+      id:"chariot", name:"전차", icon:"🚗", img:"images/chariot.png",
+      keywords:["추진","돌파","승부","실행"],
+      tone:"good",
+      core:"지금은 ‘가속’이 답인 구간. 준비보다 실행이 더 큰 이득을 줍니다.",
+      context:"상황이 완벽해질 때까지 기다리면 타이밍을 놓칠 수 있어요. 작은 실행을 연속으로 붙여서 흐름을 만들면, 주변이 뒤늦게 따라옵니다. 특히 경쟁/입찰/승부 있는 일에 강합니다.",
+      advice:"오늘 할 수 있는 ‘가장 작은 실행 1개’를 바로 하세요.",
+      warn:"속도에 취해 주변을 치지 않게—소통/보고/정리(기록)를 같이 가져가세요."
+    },
+    {
+      id:"tower", name:"탑", icon:"⚡", img:"images/tower.png",
+      keywords:["급변","충격","리셋","각성"],
+      tone:"bad",
+      core:"흔들림이 오는 카드. 다만 ‘무너질 건 무너지고 새로 세울 기회’이기도 해요.",
+      context:"예상 밖 변수(일정 변경/관계 충돌/계획 파탄)가 들어올 수 있어요. 이 카드의 핵심은 ‘피하려다 더 크게 맞지 말고’, 빨리 인정하고 재배치하는 겁니다. 불편하지만 장기적으로는 독이 빠집니다.",
+      advice:"방어보다 재정렬. 우선순위를 다시 세우세요.",
+      warn:"감정적으로 폭발하거나 ‘다 엎어버림’은 손해가 큽니다. 엎더라도 ‘정리하고 엎기’가 정답."
+    },
+    {
+      id:"star", name:"별", icon:"⭐", img:"images/star.png",
+      keywords:["희망","회복","가능성","힐링"],
+      tone:"good",
+      core:"당장 완벽하진 않아도 ‘좋아지는 방향’은 이미 열려 있어요.",
+      context:"지쳐 있는 상태에서 자주 뜨는 카드입니다. 지금은 ‘계속 버티는 힘’보다 ‘회복 루틴’이 더 중요해요. 작은 성취를 쌓으면 운이 따라붙습니다. 사람/정보/기회도 다시 연결될 확률이 높아요.",
+      advice:"한 번에 바꾸지 말고, 매일 10%씩만 회복하세요.",
+      warn:"희망을 ‘근거 없는 낙관’으로 착각하지 말기. 작은 실행이 있어야 별이 현실이 됩니다."
+    },
+    {
+      id:"death", name:"죽음", icon:"☠️", img:"images/death.png",
+      keywords:["정리","전환","새출발","단절"],
+      tone:"warn",
+      core:"끝은 나쁘지 않아요. ‘정리해야 다음이 열린다’는 신호입니다.",
+      context:"지금은 뭔가를 계속 붙잡을수록 비용이 커지는 구간일 수 있어요. 끊어야 할 것(습관/관계/프로젝트 범위)을 정리하면, 오히려 새 제안이 들어올 가능성이 큽니다. ‘선택과 집중’이 핵심.",
+      advice:"정리 리스트 3개를 쓰고, 하나만 먼저 끊어보세요.",
+      warn:"미련 때문에 ‘반쯤 정리’로 시간을 끌면 손해가 누적됩니다."
+    },
+    {
+      id:"devil", name:"악마", icon:"😈", img:"images/devil.png",
+      keywords:["집착","유혹","중독","의존"],
+      tone:"bad",
+      core:"이미 알고 있는 ‘나쁜 반복’을 끊을 타이밍입니다.",
+      context:"관계든 소비든 업무든, “이게 나를 갉아먹는데도 계속” 하는 패턴이 있어요. 이 카드는 도덕 판단이 아니라, 구조를 보라는 뜻입니다. 트리거(언제/왜 반복되는지)를 찾고, 환경을 바꾸는 게 효과적이에요.",
+      advice:"의지로 버티지 말고 ‘환경’을 바꾸세요(차단/거리/시간 제한).",
+      warn:"상대/상황 탓만 하며 계속 들어가면 더 깊게 빠집니다. 끊는 건 ‘지금’이 제일 쌉니다."
+    },
+    {
+      id:"strength", name:"힘", icon:"🦁", img:"images/strength.png",
+      keywords:["인내","자제","회복탄력성","멘탈"],
+      tone:"good",
+      core:"강함은 폭발이 아니라 ‘조절’입니다. 조용히 이기는 흐름.",
+      context:"지금은 크게 뭔가를 바꾸기보다, 버티면서 조절하는 쪽이 승률이 높아요. 말/표정/속도 조절을 하면 상대가 먼저 무너질 수 있어요. 체력, 생활 루틴이 결과를 좌우합니다.",
+      advice:"한 번에 해결하려 말고, 오늘 할 수 있는 만큼만 단단히.",
+      warn:"‘참는 척’ 하다가 한 번에 터지는 게 제일 위험. 감정 배출 루트를 만들어두세요."
+    },
+    {
+      id:"fool", name:"바보", icon:"🤡", img:"images/fool.png",
+      keywords:["시작","모험","가벼움","첫발"],
+      tone:"good",
+      core:"완벽한 계획보다 ‘첫발’이 중요합니다. 시작 운이 붙는 카드예요.",
+      context:"새로운 시도(프로젝트/관계/취미/콘텐츠)가 잘 맞는 타이밍입니다. 다만 ‘너무 큰 판’으로 시작하면 부담이 커져요. 작은 버전(MVP)으로 시작해서, 반응 보고 키우는 게 베스트.",
+      advice:"지금은 ‘작게 시작해서 빠르게 수정’이 정답.",
+      warn:"근거 없는 자신감으로 과투자/과약속은 금지. 가볍게 시작하되, 기록은 남기세요."
+    },
+    {
+      id:"justice", name:"정의", icon:"⚖️", img:"images/justice.png",
+      keywords:["균형","판단","책임","정산"],
+      tone:"warn",
+      core:"감정이 아니라 기준으로 결정해야 합니다. 정리/정산의 카드.",
+      context:"계약/역할/돈/약속 같이 ‘기준이 필요한’ 상황에서 자주 나옵니다. 지금은 말로 얼버무리기보다 문서/규칙/정의(정확한 표현)가 필요해요. 공정함은 결국 돌아옵니다.",
+      advice:"기준을 문장으로 적어두고 그 기준대로만 움직이세요.",
+      warn:"편들기/감정판단은 나중에 불리하게 돌아올 수 있어요."
+    },
+    {
+      id:"hermit", name:"은둔자", icon:"🕯️", img:"images/hermit.png",
+      keywords:["내면","거리두기","통찰","정리"],
+      tone:"warn",
+      core:"지금은 ‘사람’보다 ‘나’를 정리할 시간이 필요해요.",
+      context:"외부 소음이 많아질수록, 혼자 생각하는 시간이 답을 줍니다. 급한 연락/결정은 줄이고, 정보를 모아 정리해보세요. 혼자 있는 시간이 길어질수록 오히려 명확해집니다.",
+      advice:"오늘은 혼자 30분만. 그 안에 답이 나옵니다.",
+      warn:"고립이 길어지면 우울로 흐를 수 있어요. ‘혼자 정리 + 필요한 사람 1명만 공유’가 균형."
+    }
+  ];
+
+  const BACK_IMG = "images/back.png";
+
+  // ===== 저장 키 =====
+  const K = {
+    mode: "tarot_pick_mode_v3",      // today | free
+    todayPick: "tarot_today_pick_v3",// {date, cardId}
+    history: "tarot_history_v3"      // [{ts, mode, cardId}]
+  };
+
+  const $ = (id)=>document.getElementById(id);
+  const el = {
+    modeLabel: $("modeLabel"),
+    hint: $("hint"),
+    cardGrid: $("cardGrid"),
+    pickedLabel: $("pickedLabel"),
+    stateLabel: $("stateLabel"),
+    btnToday: $("btnToday"),
+    btnFree: $("btnFree"),
+    btnShuffle: $("btnShuffle"),
+    btnShare: $("btnShare"),
+    btnReset: $("btnReset"),
+    btnClearHistory: $("btnClearHistory"),
+
+    toneDot: $("toneDot"),
+    resTitle: $("resTitle"),
+    resKeywords: $("resKeywords"),
+    resCore: $("resCore"),
+    resContext: $("resContext"),
+    resAdvice: $("resAdvice"),
+    resWarn: $("resWarn"),
+
+    history: $("history")
+  };
+
+  function loadJSON(key, fallback){
+    try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw) : fallback; }
+    catch{ return fallback; }
+  }
+  function saveJSON(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  function fmtDate(d){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+  function nowLocal(){ return new Date(); }
+
+  function byId(id){ return CARDS.find(c=>c.id===id); }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function toneColor(tone){
+    if(tone==="good") return getComputedStyle(document.documentElement).getPropertyValue("--good").trim();
+    if(tone==="bad") return getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+    return getComputedStyle(document.documentElement).getPropertyValue("--warn").trim();
+  }
+
+  // ===== 게임 상태 =====
+  let mode = localStorage.getItem(K.mode) || "today";
+  let layout = [];           // 12슬롯에 어떤 카드가 깔려있는지 (cardId 배열)
+  let selectedIndex = null;  // 어떤 슬롯을 눌렀는지
+  let revealed = false;      // 현재 선택 카드가 뒤집혔는지
+  let currentCardId = null;  // 현재 선택 카드 id
+
+  // today 모드: 카드 자체는 고정, 위치는 섞기 할 때마다 바뀜
+  function getTodayCardId(){
+    const today = fmtDate(nowLocal());
+    const saved = loadJSON(K.todayPick, null);
+    if(saved && saved.date === today && saved.cardId) return saved.cardId;
+    const id = shuffle(CARDS)[0].id;
+    saveJSON(K.todayPick, { date: today, cardId: id });
+    return id;
+  }
+
+  function buildLayout(){
+    // layout은 항상 12장의 카드로 구성(지금은 12장만 있으므로 전부 사용)
+    // 오늘 모드면 "오늘 카드"는 고정이지만, 섞을 때마다 위치만 랜덤
+    const ids = CARDS.map(c=>c.id);
+    const shuffled = shuffle(ids);
+
+    if(mode === "today"){
+      const todayId = getTodayCardId();
+      // todayId가 layout 안에 반드시 존재(12장 전부니까 존재함)
+      // 그냥 섞인 상태 그대로 두면 “카드 고정 + 위치 랜덤”이 됨
+      // (즉, 오늘 뽑히는 카드가 어떤 건지 사용자에게는 선택 후에만 드러남)
+      return shuffled;
+    }
+    // 자유 모드도 그냥 섞어서 놓기
+    return shuffled;
+  }
+
+  function setMode(m){
+    mode = m;
+    localStorage.setItem(K.mode, mode);
+    el.modeLabel.textContent = (mode==="today") ? "오늘의 한 장" : "자유 뽑기";
+    el.btnToday.classList.toggle("primary", mode==="today");
+    el.btnFree.classList.toggle("primary", mode==="free");
+
+    el.hint.innerHTML = (mode==="today")
+      ? `오늘의 한 장은 카드가 <b>하루 동안 고정</b>이야. 대신 카드 위치는 “섞기”로 바뀐다.`
+      : `자유 뽑기는 매번 결과가 달라. 마음껏 섞고 골라봐.`;
+  }
+
+  function setResultEmpty(){
+    el.toneDot.style.background = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+    el.resTitle.textContent = "아직 선택한 카드가 없어";
+    el.resKeywords.textContent = "키워드: —";
+    el.resCore.textContent = "카드를 선택하면 해석이 표시돼.";
+    el.resContext.textContent = "—";
+    el.resAdvice.textContent = "—";
+    el.resWarn.textContent = "—";
+    el.pickedLabel.textContent = "없음";
+    el.stateLabel.textContent = "대기";
+  }
+
+  function setResult(card){
+    el.toneDot.style.background = toneColor(card.tone);
+    el.resTitle.textContent = `${card.name} ${card.icon}`;
+    el.resKeywords.textContent = `키워드: ${card.keywords.join(" · ")}`;
+    el.resCore.textContent = card.core;
+    el.resContext.textContent = card.context;
+    el.resAdvice.textContent = card.advice;
+    el.resWarn.textContent = card.warn;
+    el.pickedLabel.textContent = `${card.name}`;
+    el.stateLabel.textContent = revealed ? "공개됨" : "선택됨";
+  }
+
+  function pushHistory(cardId){
+    const hist = loadJSON(K.history, []);
+    hist.unshift({ ts: Date.now(), mode, cardId });
+    saveJSON(K.history, hist.slice(0,50));
+  }
+
+  function renderHistory(){
+    const hist = loadJSON(K.history, []);
+    if(!hist.length){
+      el.history.innerHTML = `<div class="k">아직 기록이 없어. 한 번 골라봐!</div>`;
+      return;
+    }
+    el.history.innerHTML = hist.slice(0,20).map(h=>{
+      const c = byId(h.cardId);
+      const dt = new Date(h.ts);
+      return `
+        <div class="histItem">
+          <div>
+            <b>${c.name} ${c.icon}</b>
+            <small>${h.mode==="today" ? "오늘의 한 장" : "자유 뽑기"} · ${dt.toLocaleString()}</small>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="miniBtn" data-open="${h.cardId}">보기</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    el.history.querySelectorAll("button[data-open]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-open");
+        // 기록에서 열람은 “선택 보드”와는 별개로 그냥 결과만 보여주자
+        const c = byId(id);
+        revealed = true;
+        currentCardId = id;
+        setResult(c);
+      });
+    });
+  }
+
+  function renderBoard(){
+    el.cardGrid.innerHTML = "";
+
+    layout.forEach((cardId, idx)=>{
+      const cardData = byId(cardId);
+
+      const slot = document.createElement("div");
+      slot.className = "cardSlot";
+
+      const card = document.createElement("div");
+      card.className = "card";
+
+      // 선택한 카드만 뒤집기 표시
+      const isSelected = (selectedIndex === idx);
+      if(isSelected && revealed) card.classList.add("flipped");
+
+      const back = document.createElement("div");
+      back.className = "face back";
+      back.style.backgroundImage = `url('${BACK_IMG}')`;
+
+      const front = document.createElement("div");
+      front.className = "face front";
+      front.style.backgroundImage = `url('${cardData.img}')`;
+
+      card.appendChild(back);
+      card.appendChild(front);
+
+      if(isSelected) card.classList.add("selectedGlow");
+
+      card.addEventListener("click", ()=>{
+        // 1) 아직 선택 안 했으면 선택만
+        // 2) 선택 후 다시 누르면 뒤집기(공개)
+        // 3) 다른 카드 누르면 “선택 변경”(공개 전까지는 가능)
+        if(selectedIndex === null){
+          selectedIndex = idx;
+          revealed = false;
+          currentCardId = layout[idx];
+          setResult(byId(currentCardId));
+          renderBoard();
+          return;
+        }
+
+        if(selectedIndex !== idx){
+          // 공개 전이면 선택 변경 허용 / 공개 후에는 선택 변경 막아서 “운명 고정” 느낌 살림
+          if(revealed){
+            // 이미 공개된 상태면, 다른 카드 선택은 막고 안내만
+            el.stateLabel.textContent = "공개 완료(다시 섞기 필요)";
+            return;
+          }
+          selectedIndex = idx;
+          revealed = false;
+          currentCardId = layout[idx];
+          setResult(byId(currentCardId));
+          renderBoard();
+          return;
+        }
+
+        // 같은 카드 재클릭: 뒤집어서 공개
+        if(!revealed){
+          revealed = true;
+          currentCardId = layout[idx];
+          setResult(byId(currentCardId));
+          pushHistory(currentCardId);
+          renderHistory();
+          renderBoard();
+        }else{
+          // 공개 후 재클릭은 앞/뒤 토글 가능하게 하고 싶으면 여기서 토글 처리 가능
+          // 지금은 공개 유지로 두자
+        }
+      });
+
+      slot.appendChild(card);
+      el.cardGrid.appendChild(slot);
+    });
+  }
+
+  async function copyShare(){
+    if(!currentCardId || !revealed){
+      alert("카드를 ‘공개(뒤집기)’한 뒤에 공유할 수 있어!");
+      return;
+    }
+    const c = byId(currentCardId);
+    const m = (mode==="today") ? `오늘의 한 장(${fmtDate(nowLocal())})` : "자유 뽑기";
+    const text =
+`🔮 ${m}
+[${c.name} ${c.icon}]
+키워드: ${c.keywords.join(" · ")}
+핵심: ${c.core}
+상황: ${c.context}
+조언: ${c.advice}
+주의: ${c.warn}`;
+    try{
+      await navigator.clipboard.writeText(text);
+      el.btnShare.textContent = "복사 완료!";
+      setTimeout(()=> el.btnShare.textContent = "결과 복사", 900);
+    }catch{
+      prompt("복사가 안 되면 아래 텍스트를 복사해서 보내줘!", text);
+    }
+  }
+
+  function resetSession(keepToday=false){
+    selectedIndex = null;
+    revealed = false;
+    currentCardId = null;
+    layout = buildLayout();
+    setResultEmpty();
+    renderBoard();
+
+    // 오늘 모드에서 “오늘 카드 자체를 바꾸고 싶지 않다면” keepToday=true로 사용
+    if(!keepToday && mode==="today"){
+      // 오늘 카드 자체는 날짜 기준으로 저장되므로 굳이 지울 필요 없지만,
+      // 완전 초기화 버튼에서만 지우도록 처리
+    }
+  }
+
+  // ===== 버튼 이벤트 =====
+  el.btnToday.addEventListener("click", ()=>{
+    setMode("today");
+    resetSession(true);
+  });
+
+  el.btnFree.addEventListener("click", ()=>{
+    setMode("free");
+    resetSession(true);
+  });
+
+  el.btnShuffle.addEventListener("click", ()=>{
+    // 섞기: 선택/공개 상태 초기화 + layout 재생성
+    resetSession(true);
+    el.stateLabel.textContent = "섞음";
+  });
+
+  el.btnShare.addEventListener("click", copyShare);
+
+  el.btnClearHistory.addEventListener("click", ()=>{
+    saveJSON(K.history, []);
+    renderHistory();
+  });
+
+  el.btnReset.addEventListener("click", ()=>{
+    localStorage.removeItem(K.mode);
+    localStorage.removeItem(K.todayPick);
+    localStorage.removeItem(K.history);
+    setMode("today");
+    resetSession(true);
+    renderHistory();
+  });
+
+  // ===== 시작 =====
+  setMode(mode);
+  renderHistory();
+  resetSession(true);
+</script>
+</body>
+</html>
